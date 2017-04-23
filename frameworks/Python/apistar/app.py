@@ -1,4 +1,5 @@
-from apistar import App, DBBackend, http, Route, wsgi
+from apistar import App, http, Route, wsgi
+from apistar.backends import SQLAlchemy
 from functools import partial
 from operator import attrgetter, itemgetter
 from os import environ
@@ -67,7 +68,7 @@ def plaintext_view() -> wsgi.WSGIResponse:
     )
 
 
-def get_random_world_single(db_backend: DBBackend):
+def get_random_world_single(db_backend: SQLAlchemy):
     """Test Type 2: Single Database Query"""
     wid = randint(1, 10000)
     session = db_backend.session_class()
@@ -75,7 +76,7 @@ def get_random_world_single(db_backend: DBBackend):
     return world.serialize()
 
 
-def get_random_world_single_raw(db_backend: DBBackend):
+def get_random_world_single_raw(db_backend: SQLAlchemy):
     """Test Type 2: Single Database Query"""
     db_connection = db_backend.engine.connect()
     wid = randint(1, 10000)
@@ -86,7 +87,7 @@ def get_random_world_single_raw(db_backend: DBBackend):
     return world
 
 
-def get_random_world(db_backend: DBBackend, queries: http.QueryParam):
+def get_random_world(db_backend: SQLAlchemy, queries: http.QueryParam):
     """Test Type 3: Multiple database queries"""
     queries = int(queries) if queries else 1
     if queries < 1:
@@ -100,7 +101,7 @@ def get_random_world(db_backend: DBBackend, queries: http.QueryParam):
     return worlds
 
 
-def fortune_orm(db_backend: DBBackend):
+def fortune_orm(db_backend: SQLAlchemy):
     """Test 4: Fortunes"""
     session = db_backend.session_class()
     fortunes = session.query(Fortune).all()
@@ -113,7 +114,7 @@ def fortune_orm(db_backend: DBBackend):
     return [fortune.serialize() for fortune in fortunes]
 
 
-def fortune_raw(db_backend: DBBackend):
+def fortune_raw(db_backend: SQLAlchemy):
     """Test 4: Fortunes"""
     db_connection = db_backend.engine.connect()
     fortunes = [(f.id, f.message) for f in db_connection.execute('SELECT * FROM "Fortune"')]
@@ -125,7 +126,7 @@ def fortune_raw(db_backend: DBBackend):
     return fortunes
 
 
-def updates(db_backend: DBBackend, queries: http.QueryParam):
+def updates(db_backend: SQLAlchemy, queries: http.QueryParam):
     """Test 5: Database Updates"""
     queries = int(queries) if queries else 1
     if queries < 1:
@@ -148,7 +149,7 @@ def updates(db_backend: DBBackend, queries: http.QueryParam):
     return worlds
 
 
-def raw_updates(db_backend: DBBackend, queries: http.QueryParam):
+def raw_updates(db_backend: SQLAlchemy, queries: http.QueryParam):
     """Test 5: Database Updates"""
     queries = int(queries) if queries else 1
     if queries < 1:
@@ -170,7 +171,7 @@ def raw_updates(db_backend: DBBackend, queries: http.QueryParam):
     return worlds
 
 
-def create_objects(db_backend: DBBackend):
+def create_objects(db_backend: SQLAlchemy):
     # view for local testing purposes - creates 10,000 objects
     session = db_backend.session_class()
     rp = partial(randint, 1, 10000)
@@ -179,13 +180,11 @@ def create_objects(db_backend: DBBackend):
     session.bulk_save_objects([Fortune(message="You will like kittens") for _ in range(12)])
     session.commit()
     session.close()
-    print(worlds)
     return {'message': "10,000 objects added to database"}
 
 
 settings = {
     "DATABASE": {
-        "TYPE": "SQLALCHEMY",
         # TO DO: Add the correct URL
         "URL": environ.get('DB_URL', 'postgresql://:@localhost/apistar'),
         "METADATA": Base.metadata
