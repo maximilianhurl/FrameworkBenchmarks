@@ -1,5 +1,7 @@
 from apistar import App, http, Route, wsgi
 from apistar.backends import SQLAlchemy
+from apistar.templating import Templates
+from apistar.http import Response
 from functools import partial
 from operator import attrgetter, itemgetter
 from os import environ
@@ -83,7 +85,6 @@ def get_random_world_single_raw(db_backend: SQLAlchemy):
     result = db_connection.execute('SELECT id, "randomNumber" FROM "World" WHERE id = ' + str(wid)).fetchone()
     world = {'id': result[0], 'randomNumber': result[1]}
     db_connection.close()
-    # TO DO: Check for 'application/json' content type
     return world
 
 
@@ -101,29 +102,25 @@ def get_random_world(db_backend: SQLAlchemy, queries: http.QueryParam):
     return worlds
 
 
-def fortune_orm(db_backend: SQLAlchemy):
+def fortune_orm(db_backend: SQLAlchemy, templates: Templates):
     """Test 4: Fortunes"""
     session = db_backend.session_class()
     fortunes = session.query(Fortune).all()
     fortunes.append(Fortune(id=0, message="Additional fortune added at request time."))
     fortunes.sort(key=attrgetter('message'))
-    # TO DO: Should return HTML template for each fortunte
-    # see: https://github.com/maximilianhurl/FrameworkBenchmarks/blob/master/frameworks/Python/bottle/views/fortune.tpl
-    # TO DO: Ensure UTF-8 encoding
-    # TO DO: 1 Fortune will contain japanese chars
-    return [fortune.serialize() for fortune in fortunes]
+    fortune_template = templates.get_template('fortune.html')
+    return fortune_template.render(fortunes=fortunes)
 
 
-def fortune_raw(db_backend: SQLAlchemy):
+def fortune_raw(db_backend: SQLAlchemy, templates: Templates):
     """Test 4: Fortunes"""
     db_connection = db_backend.engine.connect()
     fortunes = [(f.id, f.message) for f in db_connection.execute('SELECT * FROM "Fortune"')]
     fortunes.append((0, u'Additional fortune added at request time.'))
     fortunes = sorted(fortunes, key=itemgetter(1))
     db_connection.close()
-    # TO DO: Should return HTML template for each fortunte
-    # see: https://github.com/maximilianhurl/FrameworkBenchmarks/blob/master/frameworks/Python/bottle/views/fortune.tpl
-    return fortunes
+    fortune_template = templates.get_template('fortune-raw.html')
+    return fortune_template.render(fortunes=fortunes)
 
 
 def updates(db_backend: SQLAlchemy, queries: http.QueryParam):
@@ -149,7 +146,7 @@ def updates(db_backend: SQLAlchemy, queries: http.QueryParam):
     return worlds
 
 
-def raw_updates(db_backend: SQLAlchemy, queries: http.QueryParam):
+def raw_updates(db_backend: SQLAlchemy, queries: http.QueryParam) -> Response:
     """Test 5: Database Updates"""
     queries = int(queries) if queries else 1
     if queries < 1:
@@ -167,27 +164,22 @@ def raw_updates(db_backend: SQLAlchemy, queries: http.QueryParam):
         worlds.append({'id': world['id'], 'randomNumber': randomNumber})
         db_connection.execute('UPDATE "World" SET "randomNumber"=%s WHERE id=%s', (randomNumber, world['id']))
     db_connection.close()
-    # TO DO: Ensure application/json content type
-    return worlds
+    return Response(worlds, headers={'Content-Type': 'application/json'})
 
 
-def create_objects(db_backend: SQLAlchemy):
-    # view for local testing purposes - creates 10,000 objects
-    session = db_backend.session_class()
-    rp = partial(randint, 1, 10000)
-    worlds = [World(randomNumber=rp()) for _ in range(10000)]
-    session.bulk_save_objects(worlds)
-    session.bulk_save_objects([Fortune(message="You will like kittens") for _ in range(12)])
-    session.commit()
-    session.close()
-    return {'message': "10,000 objects added to database"}
+DBHOST = environ.get('DBHOST', 'localhost')
 
 
 settings = {
     "DATABASE": {
-        # TO DO: Add the correct URL
-        "URL": environ.get('DB_URL', 'postgresql://:@localhost/apistar'),
+        "URL": environ.get(
+            'DB_URL',
+            'postgresql://benchmarkdbuser:benchmarkdbpass@{}:3306/hello_world?charset=utf8'.format(DBHOST)
+        ),
         "METADATA": Base.metadata
+    },
+    "TEMPLATES": {
+        "DIRS": ["templates"]
     }
 }
 
@@ -202,15 +194,6 @@ routes = [
     Route('/raw-fortune', 'GET', fortune_raw),
     Route('/updates', 'GET', updates),
     Route('/raw-updates', 'GET', raw_updates),
-
-    # for testing purposes - creates 10,000 objects
-    Route('/create-objects', 'GET', create_objects),
 ]
-
-
-"""
-TO DO: Does `apistar create_tables` is called before the tests run? or will
-the tables already exist?
-"""
 
 app = App(routes=routes, settings=settings)
