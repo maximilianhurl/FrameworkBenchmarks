@@ -102,6 +102,22 @@ def get_random_world(db_backend: SQLAlchemy, queries: http.QueryParam):
     return worlds
 
 
+def get_random_world_raw(db_backend: SQLAlchemy, queries: http.QueryParam):
+    """Test Type 3: Multiple database queries"""
+    queries = int(queries) if queries else 1
+    if queries < 1:
+        queries = 1
+    if queries > 500:
+        queries = 500
+    rp = partial(randint, 1, 10000)
+    db_connection = db_backend.engine.connect()
+    worlds = []
+    for i in range(queries):
+        result = db_connection.execute('SELECT id, "randomNumber" FROM "World" WHERE id = ' + str(rp)).fetchone()
+        worlds.append({'id': result[0], 'randomNumber': result[1]})
+    return worlds
+
+
 def fortune_orm(db_backend: SQLAlchemy, templates: Templates):
     """Test 4: Fortunes"""
     session = db_backend.session_class()
@@ -190,6 +206,7 @@ routes = [
     Route('/db', 'GET', get_random_world_single),
     Route('/raw-db', 'GET', get_random_world_single_raw),
     Route('/queries', 'GET', get_random_world),
+    Route('/raw-queries', 'GET', get_random_world_raw),
     Route('/fortune', 'GET', fortune_orm),
     Route('/raw-fortune', 'GET', fortune_raw),
     Route('/updates', 'GET', updates),

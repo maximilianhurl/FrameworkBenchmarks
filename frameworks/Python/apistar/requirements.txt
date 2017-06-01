@@ -2,3 +2,4 @@ gunicorn==19.7.1
 meinheld==0.6.1
 apistar==0.1.17
 ujson==1.35
+SQLAlchemy==1.1.10
