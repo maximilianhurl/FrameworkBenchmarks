@@ -10,7 +10,7 @@
             {% for fortune in fortunes %}
             <tr>
                 <td>{{ fortune.0 }}</td>
-                <td>{{ fortune.1 }}</td>
+                <td>{{ fortune.1|escape }}</td>
             </tr>
            {% endfor %}
         </table>

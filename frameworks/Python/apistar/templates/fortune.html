@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
-    <head><title>Fortunes</title></head>
+    <head>
+        <title>Fortunes</title>
+    </head>
     <body>
         <table>
             <tr>
@@ -10,7 +12,7 @@
             {% for fortune in fortunes %}
             <tr>
                 <td>{{ fortune.id }}</td>
-                <td>{{ fortune.message }}</td>
+                <td>{{ fortune.message|escape }}</td>
             </tr>
            {% endfor %}
         </table>
