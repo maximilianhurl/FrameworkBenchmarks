@@ -116,7 +116,7 @@ def get_random_world_raw(db_backend: SQLAlchemy, queries: http.QueryParam):
     db_connection = db_backend.engine.connect()
     worlds = []
     for i in range(queries):
-        result = db_connection.execute('SELECT id, "randomnumber" FROM "world" WHERE id = ' + str(rp)).fetchone()
+        result = db_connection.execute('SELECT id, "randomnumber" FROM "world" WHERE id = ' + str(rp())).fetchone()
         worlds.append({'id': result[0], 'randomNumber': result[1]})
     return worlds
 
