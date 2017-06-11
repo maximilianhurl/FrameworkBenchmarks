@@ -19,6 +19,29 @@
       "database": "None",
       "display_name": "uvicorn",
       "notes": ""
+    },
+    "async": {
+      "setup_file": "setup",
+      "json_url": "/json",
+      "plaintext_url": "/plaintext",
+      "db_url": "/db",
+      "query_url": "/queries?queries=",
+      "fortune_url": "/fortune",
+      "update_url": "/updates?queries=",
+      "port": 8080,
+      "approach": "Realistic",
+      "classification": "Platform",
+      "framework": "uvicorn",
+      "language": "Python",
+      "flavor": "Python3",
+      "platform": "None",
+      "webserver": "None",
+      "os": "Linux",
+      "orm": "Raw",
+      "database_os": "Linux",
+      "database": "Postgres",
+      "display_name": "uvicorn",
+      "notes": ""
     }
   }]
 }
