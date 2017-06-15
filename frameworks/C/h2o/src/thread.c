@@ -32,6 +32,7 @@
 #include "error.h"
 #include "event_loop.h"
 #include "thread.h"
+#include "utility.h"
 
 static void *run_thread(void *arg);
 
@@ -50,6 +51,16 @@ void free_thread_context(thread_context_t *ctx)
 {
 	free_database_state(ctx->event_loop.h2o_ctx.loop, &ctx->db_state);
 	free_event_loop(&ctx->event_loop, &ctx->global_thread_data->h2o_receiver);
+
+	if (ctx->json_generator)
+		do {
+			json_generator_t * const gen = H2O_STRUCT_FROM_MEMBER(json_generator_t,
+			                                                      l,
+			                                                      ctx->json_generator);
+
+			ctx->json_generator = gen->l.next;
+			free_json_generator(gen, NULL, NULL, 0);
+		} while (ctx->json_generator);
 }
 
 global_thread_data_t *initialize_global_thread_data(const config_t *config,
@@ -104,18 +115,18 @@ void start_threads(global_thread_data_t *global_thread_data)
 	// The first thread context is used by the main thread.
 	global_thread_data->thread = pthread_self();
 
-	// If the number of threads is not equal to the number of processors, then let the scheduler
-	// decide how to balance the load.
-	if (global_thread_data->config->thread_num == num_cpus) {
+	// If the number of threads is not a multiple of the number of processors, then
+	// let the scheduler decide how to balance the load.
+	if (global_thread_data->config->thread_num % num_cpus == 0) {
 		CPU_ZERO_S(cpusetsize, cpuset);
 		CPU_SET_S(0, cpusetsize, cpuset);
 		CHECK_ERROR(pthread_setaffinity_np, global_thread_data->thread, cpusetsize, cpuset);
 	}
 
 	for (size_t i = global_thread_data->config->thread_num - 1; i > 0; i--) {
-		if (global_thread_data->config->thread_num == num_cpus) {
+		if (global_thread_data->config->thread_num % num_cpus == 0) {
 			CPU_ZERO_S(cpusetsize, cpuset);
-			CPU_SET_S(i, cpusetsize, cpuset);
+			CPU_SET_S(i % num_cpus, cpusetsize, cpuset);
 			CHECK_ERROR(pthread_attr_setaffinity_np, &attr, cpusetsize, cpuset);
 		}
 
